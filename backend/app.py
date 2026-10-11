@@ -8,8 +8,15 @@ from flask import Flask, request, jsonify  # For creating the Flask API
 # Initialize Flask app with a name
 superkart_api = Flask("SuperKart")
 
-# Load the trained model
+# Load the trained model (preprocessing + XGBoost pipeline)
 model = joblib.load("superkart_model.joblib")
+
+# Features expected by the model (same order as in training)
+FEATURES = [
+    'Product_Weight', 'Product_Sugar_Content', 'Product_Allocated_Area', 'Product_MRP',
+    'Store_Size', 'Store_Location_City_Type', 'Store_Type', 'Product_Id_char',
+    'Store_Age_Years', 'Product_Type_Category'
+]
 
 # Define a route for the home page
 @superkart_api.get('/')
@@ -19,50 +26,50 @@ def home():
 # Define an endpoint to predict sales for a single product
 @superkart_api.post('/v1/predict')
 def predict_sales():
-    # Get JSON data from the request
-    data = request.get_json()
+    try:
+        # Get JSON data from the request
+        data = request.get_json()
 
-    # Extract relevant features from the input data
-    sample = {
-    'Product_Weight': data['Product_Weight'],
-    'Product_Sugar_Content': data['Product_Sugar_Content'],
-    'Product_Allocated_Area': data['Product_Allocated_Area'],
-    'Product_MRP': data['Product_MRP'],
-    'Store_Size': data['Store_Size'],
-    'Store_Location_City_Type': data['Store_Location_City_Type'],
-    'Store_Type': data['Store_Type'],
-    'Product_Id_char': data['Product_Id_char'],
-    'Store_Age_Years': data['Store_Age_Years'],
-    'Product_Type_Category': data['Product_Type_Category']
-}
+        # Check that all required features are present
+        missing = [f for f in FEATURES if f not in data]
+        if missing:
+            return jsonify({'error': f'Missing features: {missing}'}), 400
 
-    # Convert the extracted data into a DataFrame
-    input_data = pd.DataFrame([sample])
+        # Extract relevant features from the input data
+        sample = {f: data[f] for f in FEATURES}
 
-    # Make a prediction using the trained model
-    prediction = model.predict(input_data).tolist()[0]
+        # Convert the extracted data into a DataFrame
+        input_data = pd.DataFrame([sample])
 
-    # Return the prediction as a JSON response
-    return jsonify({'Sales': prediction})
+        # Make a prediction using the trained model
+        prediction = float(model.predict(input_data)[0])
+
+        # Return the prediction as a JSON response
+        return jsonify({'Sales': round(prediction, 2)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Define an endpoint to predict sales for a batch of products
 @superkart_api.post('/v1/predictbatch')
 def predict_sales_batch():
-    # Get the uploaded CSV file from the request
-    file = request.files['file']
+    try:
+        # Get the uploaded CSV file from the request
+        file = request.files['file']
 
-    # Read the file into a DataFrame
-    input_data = pd.read_csv(file)
+        # Read the file into a DataFrame and keep only the model features
+        input_data = pd.read_csv(file)[FEATURES]
 
-    # Make predictions for the batch data
-    predictions = model.predict(input_data).tolist()
+        # Make predictions for the batch data
+        predictions = model.predict(input_data).tolist()
 
-    # Create an output dictionary mapping row index to predicted sales
-    output_dict = {str(i): round(pred, 2) for i, pred in enumerate(predictions)}
+        # Create an output dictionary mapping row index to predicted sales
+        output_dict = {str(i): round(float(pred), 2) for i, pred in enumerate(predictions)}
 
-    return output_dict
+        return jsonify(output_dict)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
-# Run the Flask app in debug mode
+# Run the Flask app in debug mode (only for local testing; Docker uses Gunicorn)
 if __name__ == '__main__':
     superkart_api.run(debug=True)
