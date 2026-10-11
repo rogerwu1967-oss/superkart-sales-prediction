@@ -19,7 +19,7 @@ Product_Allocated_Area = st.number_input("Product Allocated Area", min_value=0.0
 Product_MRP = st.number_input("Product MRP", min_value=0.0, value=117.08)
 Store_Size = st.selectbox("Store Size", ["Small", "Medium", "High"])
 Store_Location_City_Type = st.selectbox("Store Location City Type", ["Tier 1", "Tier 2", "Tier 3"])
-Store_Type = st.selectbox("Store Type", ["Supermarket Type1", "Supermarket Type2", "Supermarket Type3", "Departmental Store", "Food Mart"])
+Store_Type = st.selectbox("Store Type", ["Supermarket Type1", "Supermarket Type2", "Departmental Store", "Food Mart"])
 Product_Id_char = st.selectbox("Product ID Character", ["FD", "DR", "NC"])
 Store_Age_Years = st.number_input("Store Age (Years)", min_value=0, value=16)
 Product_Type_Category = st.selectbox("Product Type Category", ["Perishables", "Non Perishables"])
