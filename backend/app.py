@@ -42,8 +42,35 @@ def predict_sales():
         input_data = pd.DataFrame([sample])
 
         # Make a prediction using the trained model
-        prediction = float(model.predict(input_data)[0])
+#        prediction = float(model.predict(input_data)[0])   Roger  Mask
 
+raw_prediction = float(model.predict(input_data)[0])
+
+if raw_prediction < 0:
+    superkart_api.logger.warning(
+        "Negative sales prediction: %.2f; input=%s",
+        raw_prediction, sample
+    )
+
+prediction = max(0.0, raw_prediction)
+return jsonify({"Sales": round(prediction, 2)})
+
+
+raw_predictions = model.predict(input_data).astype(float)
+
+negative_count = int((raw_predictions < 0).sum())
+if negative_count:
+    superkart_api.logger.warning(
+        "Clipped %d negative batch predictions", negative_count
+    )
+
+predictions = np.maximum(raw_predictions, 0.0)
+output_dict = {
+    str(i): round(float(pred), 2)
+    for i, pred in enumerate(predictions)
+}
+return jsonify(output_dict)
+# Roger end
         # Return the prediction as a JSON response
         return jsonify({'Sales': round(prediction, 2)})
     except Exception as e:
