@@ -19,12 +19,14 @@ if [ "$ACTUAL_MD5" != "$EXPECTED_MD5" ]; then
   echo "ERROR: backend/superkart_model.joblib is not the model trained in the notebook. Re-run the GitHub push cell in Colab, then run this script again."; exit 1
 fi
 
-echo "== 3/5 Rebuild containers (no cache) =="
+echo "== 3/5 Rebuild containers =="
 docker rm -f backend frontend 2>/dev/null || true
 docker network create superkart-net 2>/dev/null || true
-docker build --no-cache -t superkart-backend ./backend
+docker build -t superkart-backend ./backend
+docker builder prune -af
 docker run -d --name backend --network superkart-net -p 7860:7860 superkart-backend
-docker build --no-cache -t superkart-frontend ./frontend
+docker build -t superkart-frontend ./frontend
+docker builder prune -af
 docker run -d --name frontend --network superkart-net -p 8501:8501 superkart-frontend
 
 echo "== 4/5 Wait for backend =="
